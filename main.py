@@ -10,17 +10,31 @@ def code_snippet_generator(task_description:str, model_name: str = 'deepseek-cod
     print(prompt)
     print("---------------------------------------")
 
+    full_response_content = []
+
     try:
-        response = ollama.generate(
+        generated_code: str
+        stream = ollama.generate(
             model=model_name,
             prompt=prompt,
-            # stream=True,
+            stream=True,
             options={
                 "temperature": 0.9
             }
         )
         
-        generated_code = response['response'].strip()
+        for chunks in stream:
+            if 'response' in chunks:
+                token = chunks['response']
+                print(token, end='', flush=True)
+                full_response_content.append(token)
+            if chunks.get('done'):
+                if chunks.get('total_duration'):
+                     print(f"\nGeneration complete. Total duration: {chunks['total_duration']/1E9:.2f}s")
+                else:
+                    print("\nGeneration complete.")
+
+        generated_code = "".join(full_response_content).strip()
 
         if generated_code.startswith("```"): # Generic ```
             generated_code = generated_code.split("\n", 1)[1]
